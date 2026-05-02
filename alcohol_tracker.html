@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alcohol & THC Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f3ed;
+      color: #2b241c;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      color: #6f6254;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin: 25px 0;
+    }
+
+    .stat-card, .card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #6f6254;
+      margin-top: 5px;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    .notes-field {
+      grid-column: 1 / -1;
+    }
+
+    button {
+      padding: 11px 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      cursor: pointer;
+      background: #4b3a2a;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .delete-btn {
+      background: #8b2e2e;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid #e4ded6;
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    th {
+      color: #6f6254;
+      font-size: 13px;
+    }
+
+    .card {
+      margin-top: 18px;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #6f6254;
+      margin-top: 18px;
+    }
+
+    .empty {
+      color: #6f6254;
+      margin-top: 10px;
+    }
+
+    .export-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .secondary-btn {
+      background: #756553;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Alcohol & THC Tracker</h1>
+    <p class="subtitle">Track drinks, THC mg, sleep score, and notes one day at a time.</p>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number" id="alcoholFreeDays">0</div>
+        <div class="stat-label">Alcohol-free days / last 30</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="drinkingDays">0</div>
+        <div class="stat-label">Drinking days / last 30</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="totalDrinks">0</div>
+        <div class="stat-label">Total drinks / last 30</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="thcDays">0</div>
+        <div class="stat-label">THC days / last 30</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="totalThc">0</div>
+        <div class="stat-label">Total THC mg / last 30</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <form id="entryForm">
+        <div>
+          <label for="date">Date</label>
+          <input type="date" id="date" required />
+        </div>
+
+        <div>
+          <label for="drinks">Alcohol Drinks</label>
+          <input type="number" id="drinks" min="0" step="0.5" placeholder="0" />
+        </div>
+
+        <div>
+          <label for="thcMg">THC mg</label>
+          <input type="number" id="thcMg" min="0" step="0.5" placeholder="0" />
+        </div>
+
+        <div>
+          <label for="sleepScore">Sleep Score</label>
+          <input type="number" id="sleepScore" min="0" max="100" placeholder="Optional" />
+        </div>
+
+        <div>
+          <button type="submit">Save Day</button>
+        </div>
+
+        <div class="notes-field">
+          <label for="notes">Notes</label>
+          <textarea id="notes" placeholder="Cravings, mood, sleep quality, what helped, etc."></textarea>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Daily Log</h2>
+      <div id="emptyMessage" class="empty">No entries yet. Add today above.</div>
+
+      <table id="logTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Drinks</th>
+            <th>THC mg</th>
+            <th>Sleep</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+
+      <div class="export-row">
+        <button class="secondary-btn" onclick="exportCSV()">Export CSV</button>
+        <button class="secondary-btn" onclick="print()">Print</button>
+        <button class="delete-btn" onclick="clearAllEntries()">Clear All</button>
+      </div>
+    </div>
+
+    <p class="footer">Your entries are saved only on this device/browser using local storage.</p>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "alcoholThcTrackerEntries";
+
+    const dateInput = document.getElementById("date");
+    const drinksInput = document.getElementById("drinks");
+    const thcInput = document.getElementById("thcMg");
+    const sleepInput = document.getElementById("sleepScore");
+    const notesInput = document.getElementById("notes");
+    const form = document.getElementById("entryForm");
+
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function loadEntries() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveEntries(entries) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function getLast30Entries(entries) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 29);
+      const cutoffISO = cutoff.toISOString().slice(0, 10);
+      return entries.filter(entry => entry.date >= cutoffISO);
+    }
+
+    function render() {
+      const entries = loadEntries().sort((a, b) => b.date.localeCompare(a.date));
+      const last30 = getLast30Entries(entries);
+
+      const drinkingDays = last30.filter(e => Number(e.drinks) > 0).length;
+      const thcDays = last30.filter(e => Number(e.thcMg) > 0).length;
+      const totalDrinks = last30.reduce((sum, e) => sum + Number(e.drinks || 0), 0);
+      const totalThc = last30.reduce((sum, e) => sum + Number(e.thcMg || 0), 0);
+      const alcoholFreeDays = Math.max(0, 30 - drinkingDays);
+
+      document.getElementById("alcoholFreeDays").textContent = alcoholFreeDays;
+      document.getElementById("drinkingDays").textContent = drinkingDays;
+      document.getElementById("totalDrinks").textContent = totalDrinks;
+      document.getElementById("thcDays").textContent = thcDays;
+      document.getElementById("totalThc").textContent = totalThc;
+
+      const emptyMessage = document.getElementById("emptyMessage");
+      const table = document.getElementById("logTable");
+      const tbody = document.getElementById("logBody");
+      tbody.innerHTML = "";
+
+      if (entries.length === 0) {
+        emptyMessage.style.display = "block";
+        table.style.display = "none";
+        return;
+      }
+
+      emptyMessage.style.display = "none";
+      table.style.display = "table";
+
+      entries.forEach(entry => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${entry.date}</strong></td>
+          <td>${entry.drinks}</td>
+          <td>${entry.thcMg}</td>
+          <td>${entry.sleepScore || "—"}</td>
+          <td>${entry.notes || "—"}</td>
+          <td><button class="delete-btn" onclick="deleteEntry('${entry.id}')">Delete</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const entries = loadEntries();
+      const newEntry = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        date: dateInput.value,
+        drinks: Number(drinksInput.value || 0),
+        thcMg: Number(thcInput.value || 0),
+        sleepScore: sleepInput.value ? Number(sleepInput.value) : "",
+        notes: notesInput.value.trim()
+      };
+
+      const withoutSameDate = entries.filter(entry => entry.date !== newEntry.date);
+      withoutSameDate.push(newEntry);
+      saveEntries(withoutSameDate);
+
+      dateInput.value = todayISO();
+      drinksInput.value = "";
+      thcInput.value = "";
+      sleepInput.value = "";
+      notesInput.value = "";
+
+      render();
+    });
+
+    function deleteEntry(id) {
+      const entries = loadEntries().filter(entry => entry.id !== id);
+      saveEntries(entries);
+      render();
+    }
+
+    function clearAllEntries() {
+      if (confirm("Are you sure you want to delete all entries?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        render();
+      }
+    }
+
+    function exportCSV() {
+      const entries = loadEntries().sort((a, b) => a.date.localeCompare(b.date));
+      if (entries.length === 0) {
+        alert("No entries to export.");
+        return;
+      }
+
+      const headers = ["Date", "Drinks", "THC mg", "Sleep Score", "Notes"];
+      const rows = entries.map(e => [
+        e.date,
+        e.drinks,
+        e.thcMg,
+        e.sleepScore || "",
+        (e.notes || "").replace(/"/g, '""')
+      ]);
+
+      const csv = [headers, ...rows]
+        .map(row => row.map(value => `"${value}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "alcohol-thc-tracker.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    dateInput.value = todayISO();
+    render();
+  </script>
+</body>
+</html>
