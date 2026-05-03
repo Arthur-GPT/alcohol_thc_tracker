@@ -330,21 +330,23 @@
     }
 
     function calculateAlcoholFreeStreak(entries) {
+      if (entries.length === 0) return 0;
+
       const byDate = {};
       entries.forEach(entry => {
         byDate[entry.date] = Number(entry.drinks || 0);
       });
 
+      // Start from the most recent day you actually logged, not necessarily today.
+      // This way, if you forget to log today, your streak does not falsely show 0.
+      const loggedDates = Object.keys(byDate).sort();
+      let currentDate = new Date(loggedDates[loggedDates.length - 1] + "T00:00:00");
       let streak = 0;
-      let currentDate = new Date(todayISO() + "T00:00:00");
 
       while (true) {
         const iso = currentDate.toISOString().slice(0, 10);
 
-        // If there is no entry for a day, stop the streak.
-        // This keeps the streak honest and based only on logged days.
         if (!(iso in byDate)) break;
-
         if (byDate[iso] > 0) break;
 
         streak++;
@@ -463,7 +465,8 @@
 
       const csv = [headers, ...rows]
         .map(row => row.map(escapeCSV).join(","))
-        .join("\n");
+        .join("
+");
 
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -494,14 +497,18 @@
         } else if (char === "," && !inQuotes) {
           row.push(cell);
           cell = "";
-        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        } else if ((char === "
+" || char === "
+") && !inQuotes) {
           if (cell || row.length) {
             row.push(cell);
             rows.push(row);
             row = [];
             cell = "";
           }
-          if (char === "\r" && next === "\n") i++;
+          if (char === "
+" && next === "
+") i++;
         } else {
           cell += char;
         }
