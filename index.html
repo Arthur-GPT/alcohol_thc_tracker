@@ -34,7 +34,7 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
       gap: 12px;
       margin: 25px 0;
     }
@@ -169,6 +169,22 @@
         overflow-x: auto;
         white-space: nowrap;
       }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stat-card {
+        padding: 14px 10px;
+      }
+
+      .stat-number {
+        font-size: 24px;
+      }
+
+      .stat-label {
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -191,16 +207,16 @@
         <div class="stat-label">Drinking days / last 30</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number" id="totalDrinks">0</div>
-        <div class="stat-label">Total drinks / last 30</div>
+        <div class="stat-number" id="drinkingDaysThisWeek">0</div>
+        <div class="stat-label">Drinking days this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="thcDaysThisWeek">0</div>
+        <div class="stat-label">THC days this week</div>
       </div>
       <div class="stat-card">
         <div class="stat-number" id="thcDays">0</div>
         <div class="stat-label">THC days / last 30</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="totalThc">0</div>
-        <div class="stat-label">Total THC mg / last 30</div>
       </div>
     </div>
 
@@ -257,6 +273,8 @@
 
       <div class="export-row">
         <button class="secondary-btn" onclick="exportCSV()">Export CSV</button>
+        <button class="secondary-btn" onclick="document.getElementById('importFile').click()">Import CSV</button>
+        <input type="file" id="importFile" accept=".csv" style="display:none;" onchange="importCSV(event)" />
         <button class="secondary-btn" onclick="print()">Print</button>
         <button class="delete-btn" onclick="clearAllEntries()">Clear All</button>
       </div>
@@ -298,6 +316,19 @@
       return entries.filter(entry => entry.date >= cutoffISO);
     }
 
+    function getThisCalendarWeekEntries(entries) {
+      const today = new Date(todayISO() + "T00:00:00");
+      const sunday = new Date(today);
+      sunday.setDate(today.getDate() - today.getDay());
+      const saturday = new Date(sunday);
+      saturday.setDate(sunday.getDate() + 6);
+
+      const sundayISO = sunday.toISOString().slice(0, 10);
+      const saturdayISO = saturday.toISOString().slice(0, 10);
+
+      return entries.filter(entry => entry.date >= sundayISO && entry.date <= saturdayISO);
+    }
+
     function calculateAlcoholFreeStreak(entries) {
       const byDate = {};
       entries.forEach(entry => {
@@ -326,20 +357,21 @@
     function render() {
       const entries = loadEntries().sort((a, b) => b.date.localeCompare(a.date));
       const last30 = getLast30Entries(entries);
+      const thisWeek = getThisCalendarWeekEntries(entries);
 
       const drinkingDays = last30.filter(e => Number(e.drinks) > 0).length;
       const thcDays = last30.filter(e => Number(e.thcMg) > 0).length;
-      const totalDrinks = last30.reduce((sum, e) => sum + Number(e.drinks || 0), 0);
-      const totalThc = last30.reduce((sum, e) => sum + Number(e.thcMg || 0), 0);
+      const drinkingDaysThisWeek = thisWeek.filter(e => Number(e.drinks) > 0).length;
+      const thcDaysThisWeek = thisWeek.filter(e => Number(e.thcMg) > 0).length;
       const alcoholFreeDays = Math.max(0, 30 - drinkingDays);
       const currentStreak = calculateAlcoholFreeStreak(entries);
 
       document.getElementById("currentStreak").textContent = currentStreak;
       document.getElementById("alcoholFreeDays").textContent = alcoholFreeDays;
       document.getElementById("drinkingDays").textContent = drinkingDays;
-      document.getElementById("totalDrinks").textContent = totalDrinks;
+      document.getElementById("drinkingDaysThisWeek").textContent = drinkingDaysThisWeek;
+      document.getElementById("thcDaysThisWeek").textContent = thcDaysThisWeek;
       document.getElementById("thcDays").textContent = thcDays;
-      document.getElementById("totalThc").textContent = totalThc;
 
       const emptyMessage = document.getElementById("emptyMessage");
       const table = document.getElementById("logTable");
@@ -431,8 +463,7 @@
 
       const csv = [headers, ...rows]
         .map(row => row.map(escapeCSV).join(","))
-        .join("
-");
+        .join("\n");
 
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -443,6 +474,91 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"' && inQuotes && next === '"') {
+          cell += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          row.push(cell);
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (cell || row.length) {
+            row.push(cell);
+            rows.push(row);
+            row = [];
+            cell = "";
+          }
+          if (char === "\r" && next === "\n") i++;
+        } else {
+          cell += char;
+        }
+      }
+
+      if (cell || row.length) {
+        row.push(cell);
+        rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function importCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const rows = parseCSV(e.target.result);
+        if (rows.length < 2) {
+          alert("No entries found in that CSV file.");
+          return;
+        }
+
+        const imported = rows.slice(1).map(row => ({
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+          date: row[0],
+          drinks: Number(row[1] || 0),
+          thcMg: Number(row[2] || 0),
+          sleepScore: row[3] ? Number(row[3]) : "",
+          notes: row[4] || ""
+        })).filter(entry => entry.date);
+
+        if (imported.length === 0) {
+          alert("No valid entries found in that CSV file.");
+          return;
+        }
+
+        const existing = loadEntries();
+        const mergedByDate = {};
+
+        existing.forEach(entry => {
+          mergedByDate[entry.date] = entry;
+        });
+
+        imported.forEach(entry => {
+          mergedByDate[entry.date] = entry;
+        });
+
+        saveEntries(Object.values(mergedByDate));
+        event.target.value = "";
+        render();
+        alert(`Imported ${imported.length} entries. If dates overlapped, the imported version replaced the old one.`);
+      };
+
+      reader.readAsText(file);
     }
 
     dateInput.value = todayISO();
