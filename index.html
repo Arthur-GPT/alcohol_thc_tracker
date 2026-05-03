@@ -179,6 +179,10 @@
 
     <div class="stats">
       <div class="stat-card">
+        <div class="stat-number" id="currentStreak">0</div>
+        <div class="stat-label">Current alcohol-free streak</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-number" id="alcoholFreeDays">0</div>
         <div class="stat-label">Alcohol-free days / last 30</div>
       </div>
@@ -294,6 +298,31 @@
       return entries.filter(entry => entry.date >= cutoffISO);
     }
 
+    function calculateAlcoholFreeStreak(entries) {
+      const byDate = {};
+      entries.forEach(entry => {
+        byDate[entry.date] = Number(entry.drinks || 0);
+      });
+
+      let streak = 0;
+      let currentDate = new Date(todayISO() + "T00:00:00");
+
+      while (true) {
+        const iso = currentDate.toISOString().slice(0, 10);
+
+        // If there is no entry for a day, stop the streak.
+        // This keeps the streak honest and based only on logged days.
+        if (!(iso in byDate)) break;
+
+        if (byDate[iso] > 0) break;
+
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      }
+
+      return streak;
+    }
+
     function render() {
       const entries = loadEntries().sort((a, b) => b.date.localeCompare(a.date));
       const last30 = getLast30Entries(entries);
@@ -303,7 +332,9 @@
       const totalDrinks = last30.reduce((sum, e) => sum + Number(e.drinks || 0), 0);
       const totalThc = last30.reduce((sum, e) => sum + Number(e.thcMg || 0), 0);
       const alcoholFreeDays = Math.max(0, 30 - drinkingDays);
+      const currentStreak = calculateAlcoholFreeStreak(entries);
 
+      document.getElementById("currentStreak").textContent = currentStreak;
       document.getElementById("alcoholFreeDays").textContent = alcoholFreeDays;
       document.getElementById("drinkingDays").textContent = drinkingDays;
       document.getElementById("totalDrinks").textContent = totalDrinks;
@@ -390,19 +421,27 @@
         e.drinks,
         e.thcMg,
         e.sleepScore || "",
-        (e.notes || "").replace(/"/g, '""')
+        e.notes || ""
       ]);
 
-      const csv = [headers, ...rows]
-        .map(row => row.map(value => `"${value}"`).join(","))
-        .join("\n");
+      const escapeCSV = value => {
+        const text = String(value ?? "");
+        return `"${text.replace(/"/g, '""')}"`;
+      };
 
-      const blob = new Blob([csv], { type: "text/csv" });
+      const csv = [headers, ...rows]
+        .map(row => row.map(escapeCSV).join(","))
+        .join("
+");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = "alcohol-thc-tracker.csv";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
@@ -411,3 +450,4 @@
   </script>
 </body>
 </html>
+
